@@ -86,7 +86,7 @@ app.UseMiddleware<GlobalExceptionMiddleware>();
 
 await ApplyMigrationsWithRetryAsync(app.Services, app.Logger, app.Environment.IsDevelopment());
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("EnableSwagger"))
 {
     app.UseSwagger();
     app.UseSwaggerUI();
@@ -132,4 +132,5 @@ static async Task ApplyMigrationsWithRetryAsync(IServiceProvider services, Micro
 }
 
 public partial class Program { }
+
 
