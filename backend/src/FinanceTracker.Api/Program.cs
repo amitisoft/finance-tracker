@@ -84,7 +84,15 @@ var app = builder.Build();
 
 app.UseMiddleware<GlobalExceptionMiddleware>();
 
-await ApplyMigrationsWithRetryAsync(app.Services, app.Logger, app.Environment.IsDevelopment());
+var runMigrationsOnStartup = builder.Configuration.GetValue("RunMigrationsOnStartup", app.Environment.IsDevelopment());
+if (runMigrationsOnStartup)
+{
+    await ApplyMigrationsWithRetryAsync(app.Services, app.Logger, app.Environment.IsDevelopment());
+}
+else
+{
+    app.Logger.LogInformation("Skipping database migration on startup (RunMigrationsOnStartup=false).");
+}
 
 if (app.Environment.IsDevelopment() || builder.Configuration.GetValue<bool>("EnableSwagger"))
 {
@@ -132,5 +140,6 @@ static async Task ApplyMigrationsWithRetryAsync(IServiceProvider services, Micro
 }
 
 public partial class Program { }
+
 
 
