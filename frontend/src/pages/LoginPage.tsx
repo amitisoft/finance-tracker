@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLoader } from "react-icons/fi";
 import { InputField } from "components/forms/InputField";
 import { authService } from "services/authService";
 import { useAuthStore } from "store/authStore";
@@ -36,7 +36,7 @@ export const LoginPage = () => {
   };
 
   return (
-    <div>
+    <div className="auth-form-shell">
       <h1>Welcome back</h1>
       <p>Sign in to continue tracking your money with clarity.</p>
       <form onSubmit={handleSubmit(onSubmit)} className="form-stack">
@@ -65,6 +65,12 @@ export const LoginPage = () => {
         <Link to="/signup">Create account</Link>
         <Link to="/forgot-password">Forgot password?</Link>
       </div>
+      {loading ? (
+        <div className="auth-inline-loader" role="status" aria-live="polite">
+          <FiLoader className="spin" />
+          <p>Signing in, please wait...</p>
+        </div>
+      ) : null}
     </div>
   );
 };

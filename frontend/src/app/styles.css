@@ -901,6 +901,28 @@ a {
   box-shadow: var(--shadow-md);
 }
 
+.auth-form-shell {
+  position: relative;
+}
+
+.auth-inline-loader {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--muted);
+  z-index: 5;
+}
+
+.auth-inline-loader p {
+  margin: 0;
+  font-weight: 600;
+}
+
 .auth-links {
   margin-top: 14px;
   display: flex;
@@ -1128,7 +1150,18 @@ a {
   }
 
   .sidebar-foot {
-    display: none;
+    display: block;
+    margin-top: 10px;
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .sidebar-foot p {
+    font-size: 1rem;
+  }
+
+  .sidebar-foot small {
+    font-size: 0.95rem;
   }
 
   .mobile-menu-btn.icon-btn {

@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import { isAxiosError } from "axios";
 import toast from "react-hot-toast";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLoader } from "react-icons/fi";
 import { InputField } from "components/forms/InputField";
 import { authService } from "services/authService";
 import { signupSchema, type SignupFormValues } from "features/auth/authSchemas";
@@ -36,7 +36,7 @@ export const SignupPage = () => {
   };
 
   return (
-    <div>
+    <div className="auth-form-shell">
       <h1>Create account</h1>
       <p>Set up your workspace and get your first financial snapshot in minutes.</p>
       <form onSubmit={handleSubmit(onSubmit)} className="form-stack">
@@ -66,6 +66,12 @@ export const SignupPage = () => {
       <div className="auth-links">
         <Link to="/login">Already have an account?</Link>
       </div>
+      {loading ? (
+        <div className="auth-inline-loader" role="status" aria-live="polite">
+          <FiLoader className="spin" />
+          <p>Creating account, please wait...</p>
+        </div>
+      ) : null}
     </div>
   );
 };

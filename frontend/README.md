@@ -1,60 +1,41 @@
-# Frontend (React + TypeScript + Vite)
+# Frontend
 
-## Overview
-Frontend stack:
-- React 18
-- TypeScript
-- Vite
-- React Router
+React single-page app for personal finance flows.
+
+## Tech and Packages
+- React 18 + TypeScript
+- Vite 6
+- React Router DOM
 - TanStack Query
 - Axios
 - React Hook Form + Zod
+- Zustand
 - Recharts
+- React Hot Toast
+- React Icons
 
-## Environment Configuration
-Frontend uses Vite environment variables at dev/build time.
+## Features
+- Auth screens (login, signup, forgot/reset password)
+- Dashboard summary + quick add
+- Transactions (search, create, update, delete)
+- Accounts, budgets, goals, recurring, reports
+- User profile (edit, password change, logout)
+- Global search suggestions across modules
+- Responsive nav: desktop sidebar + mobile drawer/hamburger
 
-Primary variable:
-- `VITE_API_URL` (backend base origin, without `/api`)
-
-Typical values:
-- Local backend: `http://localhost:5213`
-- Podman/Docker compose backend (host access): `http://localhost:5213`
-- Cloud backend: `https://<your-api-domain>`
-
-## Local Run
+## Run
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+App URL: `http://localhost:5173`
 
-Default URL:
-- `http://localhost:5173`
-
-## Production Build
+## Build
 ```bash
 npm run build
 npm run preview
 ```
 
-## Podman/Docker Image Run
-Build image from `frontend/`:
-```bash
-podman build -t finance-tracker-frontend --build-arg VITE_API_URL=http://localhost:5213 .
-```
-
-Run container:
-```bash
-podman run --rm -p 4173:80 finance-tracker-frontend
-```
-
-Nginx serves the static build with SPA fallback support.
-
-## Azure Readiness Notes
-- Frontend is static-build ready (`dist/`).
-- Deploy options:
-  - Azure Static Web Apps (recommended for frontend)
-  - Azure Storage Static Website + CDN
-  - Containerized Nginx on Azure Container Apps
-- Ensure `VITE_API_URL` is set correctly during build in CI/CD.
+## Env
+- `VITE_API_URL` (example: `http://localhost:5213`)

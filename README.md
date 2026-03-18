@@ -1,40 +1,31 @@
 # Personal Finance Tracker
 
-Finance app for accounts, transactions, budgets, goals, recurring entries, and reports.
+Deployment-ready full stack app for personal finance management.
 
-## Project Overview
-Personal Finance Tracker helps users manage:
-- accounts and balances
-- transactions (income, expense, transfer)
-- monthly budgets
-- savings goals
-- recurring payments/income
-- dashboard metrics and reports
-
-## Tech Stack
-- Backend: ASP.NET Core Web API (C#)
+## Stack
 - Frontend: React + TypeScript + Vite
-- Database: PostgreSQL
-- ORM: Entity Framework Core (code-first migrations)
+- Backend: ASP.NET Core Web API (`net10.0`)
+- Database: PostgreSQL 16
 - Auth: JWT + refresh tokens
+- ORM: EF Core + Npgsql
 
-## Repository Structure
-- `backend/` API and tests
-- `frontend/` React app
-- `compose.yml` full-stack Podman/Docker setup
+## Deployment-First Run (Podman/Docker)
+From repo root:
+```bash
+podman compose -f compose.yml up --build
+```
 
-## Local Setup (No Containers)
-Prerequisites:
-- .NET SDK 10+
-- Node.js 20+
-- PostgreSQL 16+
+Default ports:
+- Frontend: `http://localhost:4173`
+- Backend API: `http://localhost:5213`
+- PostgreSQL: `localhost:5432`
 
+## Local Dev Run (without containers)
 1. Backend
 ```bash
 dotnet restore backend/FinanceTracker.slnx --configfile NuGet.Config
 dotnet run --project backend/src/FinanceTracker.Api/FinanceTracker.Api.csproj
 ```
-
 2. Frontend
 ```bash
 cd frontend
@@ -42,25 +33,22 @@ npm install
 npm run dev
 ```
 
-3. Open
+Dev ports:
 - Frontend: `http://localhost:5173`
-- API: `http://localhost:5213`
-- Swagger (Development): `http://localhost:5213/swagger`
+- Backend: `http://localhost:5213`
 
-## Podman / Compose Run (Optional)
-Prerequisites:
-- Podman + podman-compose (or Docker + docker compose)
+## Fresh User Login Flow (important)
+1. Open app and **Register** a new user.
+2. Login with the same credentials.
+3. Default categories are auto-created for that user.
+4. Create at least one account.
+5. Start adding transactions/budgets/goals/recurring items.
 
-1. Start stack
-```bash
-podman compose -f compose.yml up --build
-```
-
-2. Open
-- Frontend: `http://localhost:4173`
-- API (host): `http://localhost:5213`
-- PostgreSQL: `localhost:5432`
+## Notes
+- API migrations run automatically on startup by default.
+- If using a clean database, first app start may take a few seconds.
+- SQL utility scripts are in `backend/scripts/`.
 
 ## Module Docs
-- Backend guide: `backend/README.md`
-- Frontend guide: `frontend/README.md`
+- Frontend: `frontend/README.md`
+- Backend: `backend/README.md`
