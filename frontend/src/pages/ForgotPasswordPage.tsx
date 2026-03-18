@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { isAxiosError } from "axios";
 import toast from "react-hot-toast";
+import { FiLoader } from "react-icons/fi";
 import { InputField } from "components/forms/InputField";
 import { authService } from "services/authService";
 
@@ -86,6 +87,12 @@ export const ForgotPasswordPage = () => {
         <Link to="/reset-password">Have token? Reset password</Link>
         <Link to="/login">Back to sign in</Link>
       </div>
+      {isSubmitting ? (
+        <div className="auth-inline-loader" role="status" aria-live="polite">
+          <FiLoader className="spin" />
+          <p>Generating token, please wait...</p>
+        </div>
+      ) : null}
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { isAxiosError } from "axios";
 import toast from "react-hot-toast";
-import { FiEye, FiEyeOff } from "react-icons/fi";
+import { FiEye, FiEyeOff, FiLoader } from "react-icons/fi";
 import { InputField } from "components/forms/InputField";
 import { authService } from "services/authService";
 
@@ -101,6 +101,12 @@ export const ResetPasswordPage = () => {
       <div className="auth-links">
         <Link to="/login">Back to sign in</Link>
       </div>
+      {isSubmitting ? (
+        <div className="auth-inline-loader" role="status" aria-live="polite">
+          <FiLoader className="spin" />
+          <p>Resetting password, please wait...</p>
+        </div>
+      ) : null}
     </div>
   );
 };
