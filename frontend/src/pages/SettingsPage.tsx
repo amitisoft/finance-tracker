@@ -24,7 +24,7 @@ export const SettingsPage = () => {
   return (
     <div className="page-grid">
       <PageHeader title="Settings" subtitle="Profile, security and category configuration" />
-      <Card title="Category management">
+      <Card title="Add category" subtitle="Create custom income or expense categories">
         <form className="row-form" onSubmit={(e) => {
           e.preventDefault();
           const form = new FormData(e.currentTarget as HTMLFormElement);
@@ -42,9 +42,24 @@ export const SettingsPage = () => {
           <input name="icon" defaultValue="tag" required />
           <button className="primary-btn" type="submit" disabled={createCategory.isPending}>{createCategory.isPending ? "Adding..." : "Add Category"}</button>
         </form>
-        <table className="table"><thead><tr><th>Name</th><th>Type</th><th>Default</th></tr></thead><tbody>
-          {categories.data?.map((c) => <tr key={c.id}><td>{c.name}</td><td>{c.type === 1 ? "Income" : "Expense"}</td><td>{c.isDefault ? "Yes" : "No"}</td></tr>)}
-        </tbody></table>
+      </Card>
+      <Card title="Category list" subtitle="Default and custom categories currently available">
+        <div className="table-wrap">
+          <table className="table settings-category-table">
+            <thead>
+              <tr><th>Name</th><th>Type</th><th>Default</th></tr>
+            </thead>
+            <tbody>
+              {categories.data?.map((c) => (
+                <tr key={c.id}>
+                  <td>{c.name}</td>
+                  <td>{c.type === 1 ? "Income" : "Expense"}</td>
+                  <td>{c.isDefault ? "Yes" : "No"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </Card>
       <Card title="Security">
         <p>Session management and password reset are enabled through secure auth APIs.</p>

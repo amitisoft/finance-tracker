@@ -44,7 +44,8 @@ export const goalService = {
   update: async (id: string, payload: { name: string; targetAmount: number; currentAmount: number; targetDate?: string; linkedAccountId?: string }) =>
     (await api.put<ApiResponse<Goal>>(`/goals/${id}`, payload)).data.data,
   contribute: async (id: string, amount: number) => (await api.post<ApiResponse<Goal>>(`/goals/${id}/contribute`, { amount })).data.data,
-  withdraw: async (id: string, amount: number) => (await api.post<ApiResponse<Goal>>(`/goals/${id}/withdraw`, { amount })).data.data
+  withdraw: async (id: string, amount: number) => (await api.post<ApiResponse<Goal>>(`/goals/${id}/withdraw`, { amount })).data.data,
+  remove: async (id: string) => api.delete(`/goals/${id}`)
 };
 
 export const recurringService = {

@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { Card } from "components/common/Card";
 import { PageHeader } from "components/common/PageHeader";
@@ -12,7 +13,9 @@ import { formatCurrency, formatDate } from "utils/format";
 const today = new Date().toISOString().slice(0, 10);
 
 export const TransactionsPage = () => {
-  const [search, setSearch] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get("search") ?? "";
+  const [search, setSearch] = useState(initialSearch);
   const [txType, setTxType] = useState(2);
   const transactions = useTransactions(search ? { search } : undefined);
   const accounts = useAccounts();
@@ -48,6 +51,10 @@ export const TransactionsPage = () => {
     }),
     [accounts.data, categories.data]
   );
+
+  useEffect(() => {
+    setSearch(searchParams.get("search") ?? "");
+  }, [searchParams]);
 
   return (
     <div className="page-grid">
@@ -107,7 +114,17 @@ export const TransactionsPage = () => {
 
       <Card title="All transactions" subtitle="Search and scan across your complete history">
         <div className="table-toolbar">
-          <input className="search-input" placeholder="Search by note" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input
+            className="search-input"
+            placeholder="Search by note"
+            value={search}
+            onChange={(e) => {
+              const value = e.target.value;
+              setSearch(value);
+              if (value.trim()) setSearchParams({ search: value });
+              else setSearchParams({});
+            }}
+          />
           <small>{transactions.data?.length ?? 0} records</small>
         </div>
 

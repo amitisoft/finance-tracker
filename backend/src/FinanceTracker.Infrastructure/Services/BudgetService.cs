@@ -62,13 +62,24 @@ public sealed class BudgetService(FinanceTrackerDbContext db, ICurrentUserServic
         var budget = await db.Budgets.Include(x => x.Category).FirstOrDefaultAsync(x => x.Id == id && x.UserId == currentUser.UserId, cancellationToken)
             ?? throw new NotFoundException("Budget not found.");
 
+        var duplicate = await db.Budgets.AnyAsync(
+            x => x.UserId == currentUser.UserId &&
+                 x.Id != id &&
+                 x.Month == request.Month &&
+                 x.Year == request.Year &&
+                 x.CategoryId == request.CategoryId,
+            cancellationToken);
+
+        if (duplicate) throw new AppValidationException("Budget already exists for category in this month.");
+
         budget.CategoryId = request.CategoryId;
         budget.Month = request.Month;
         budget.Year = request.Year;
         budget.Amount = request.Amount;
 
         await db.SaveChangesAsync(cancellationToken);
-        return new BudgetResponse(budget.Id, budget.CategoryId, budget.Category?.Name ?? "N/A", budget.Month, budget.Year, budget.Amount, 0, 0, "OnTrack");
+        var category = await db.Categories.FirstOrDefaultAsync(x => x.Id == budget.CategoryId, cancellationToken);
+        return new BudgetResponse(budget.Id, budget.CategoryId, category?.Name ?? "N/A", budget.Month, budget.Year, budget.Amount, 0, 0, "OnTrack");
     }
 
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)

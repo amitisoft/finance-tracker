@@ -102,6 +102,15 @@ public sealed class GoalService(FinanceTrackerDbContext db, ICurrentUserService 
         return Map(goal);
     }
 
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var goal = await db.Goals.FirstOrDefaultAsync(x => x.Id == id && x.UserId == currentUser.UserId, cancellationToken)
+            ?? throw new NotFoundException("Goal not found.");
+
+        db.Goals.Remove(goal);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
     private static GoalResponse Map(SavingsGoal x)
     {
         var pct = x.TargetAmount == 0 ? 0 : Math.Round((x.CurrentAmount / x.TargetAmount) * 100, 2);

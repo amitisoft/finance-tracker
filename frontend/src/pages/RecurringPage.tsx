@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { FiEdit2, FiPauseCircle, FiPlayCircle, FiTrash2, FiX } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { Card } from "components/common/Card";
 import { PageHeader } from "components/common/PageHeader";
 import { EmptyState, LoadingState } from "components/feedback/States";
 import { useAccounts, useCategories, useRecurring } from "hooks/useFinanceQueries";
 import { recurringService } from "services/financeServices";
+import type { RecurringItem } from "types/api";
 import { getApiErrorMessage } from "utils/apiError";
 import { formatCurrency, formatDate } from "utils/format";
 
@@ -17,6 +19,7 @@ const freqLabel: Record<number, string> = {
 };
 
 const today = new Date().toISOString().slice(0, 10);
+const toDateInput = (value: string) => String(value).slice(0, 10);
 
 export const RecurringPage = () => {
   const recurring = useRecurring();
@@ -24,6 +27,16 @@ export const RecurringPage = () => {
   const categories = useCategories();
   const qc = useQueryClient();
   const [txType, setTxType] = useState(2);
+  const [editingItem, setEditingItem] = useState<RecurringItem | null>(null);
+  const [editType, setEditType] = useState(2);
+  const [editAccountId, setEditAccountId] = useState("");
+  const [editDestinationAccountId, setEditDestinationAccountId] = useState("");
+  const [editCategoryId, setEditCategoryId] = useState("");
+  const [editFrequency, setEditFrequency] = useState(3);
+  const [editAmount, setEditAmount] = useState("");
+  const [editNextRunDate, setEditNextRunDate] = useState(today);
+  const [editNote, setEditNote] = useState("");
+  const [editPaused, setEditPaused] = useState(false);
 
   const createRecurring = useMutation({
     mutationFn: recurringService.create,
@@ -35,11 +48,39 @@ export const RecurringPage = () => {
     onError: (error) => toast.error(getApiErrorMessage(error, "Unable to save recurring item"))
   });
 
+  const updateRecurring = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { accountId: string; destinationAccountId?: string; categoryId?: string; type: number; frequency: number; amount: number; startDate: string; nextRunDate: string; endDate?: string; note?: string; isPaused: boolean } }) =>
+      recurringService.update(id, payload),
+    onSuccess: () => {
+      toast.success("Recurring item updated");
+      setEditingItem(null);
+      qc.invalidateQueries({ queryKey: ["recurring"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, "Unable to update recurring item"))
+  });
+
+  const deleteRecurring = useMutation({
+    mutationFn: recurringService.remove,
+    onSuccess: () => {
+      toast.success("Recurring item deleted");
+      qc.invalidateQueries({ queryKey: ["recurring"] });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+    onError: (error) => toast.error(getApiErrorMessage(error, "Unable to delete recurring item"))
+  });
+
   const categoryOptions = useMemo(() => {
     const all = categories.data ?? [];
     const byType = all.filter((c) => Number(c.type) === txType);
     return byType.length > 0 ? byType : all;
   }, [categories.data, txType]);
+
+  const editCategoryOptions = useMemo(() => {
+    const all = categories.data ?? [];
+    const byType = all.filter((c) => Number(c.type) === editType);
+    return byType.length > 0 ? byType : all;
+  }, [categories.data, editType]);
 
   const isTransfer = txType === 3;
   const canSubmit = (accounts.data?.length ?? 0) > 0 && (isTransfer || categoryOptions.length > 0);
@@ -49,7 +90,7 @@ export const RecurringPage = () => {
       <PageHeader title="Recurring" subtitle="Keep recurring bills and subscriptions visible before they hit your balance." />
       <Card title="Schedule recurring payment" subtitle="Daily, weekly, monthly, or yearly automation">
         <form
-          className="row-form"
+          className="row-form recurring-create-form"
           onSubmit={(e) => {
             e.preventDefault();
             if (!canSubmit) {
@@ -80,48 +121,64 @@ export const RecurringPage = () => {
             setTxType(2);
           }}
         >
-          <select name="accountId" required>
-            {accounts.data?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-
-          {isTransfer ? (
-            <select name="destinationAccountId" required>
-              <option value="">Select destination account</option>
+          <label className="field recurring-field recurring-from">
+            <span>From account</span>
+            <select name="accountId" required>
               {accounts.data?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
+          </label>
+
+          {isTransfer ? (
+            <label className="field recurring-field recurring-category">
+              <span>To account</span>
+              <select name="destinationAccountId" required>
+                <option value="">Select destination account</option>
+                {accounts.data?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </label>
           ) : (
-            <select name="categoryId" required disabled={categoryOptions.length === 0}>
-              {categoryOptions.length === 0 ? (
-                <option value="">No categories available</option>
-              ) : (
-                categoryOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)
-              )}
-            </select>
+            <label className="field recurring-field recurring-category">
+              <span>Category</span>
+              <select name="categoryId" required disabled={categoryOptions.length === 0}>
+                {categoryOptions.length === 0 ? <option value="">No categories available</option> : categoryOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </label>
           )}
 
-          <select
-            name="type"
-            value={txType}
-            onChange={(e) => setTxType(Number(e.target.value))}
-          >
-            <option value={1}>Income</option>
-            <option value={2}>Expense</option>
-            <option value={3}>Transfer</option>
-          </select>
+          <label className="field recurring-field recurring-type">
+            <span>Transaction type</span>
+            <select name="type" value={txType} onChange={(e) => setTxType(Number(e.target.value))}>
+              <option value={1}>Income</option>
+              <option value={2}>Expense</option>
+              <option value={3}>Transfer</option>
+            </select>
+          </label>
 
-          <select name="frequency">
-            <option value={1}>Daily</option>
-            <option value={2}>Weekly</option>
-            <option value={3}>Monthly</option>
-            <option value={4}>Yearly</option>
-          </select>
+          <label className="field recurring-field recurring-frequency">
+            <span>Repeat every</span>
+            <select name="frequency">
+              <option value={1}>Daily</option>
+              <option value={2}>Weekly</option>
+              <option value={3}>Monthly</option>
+              <option value={4}>Yearly</option>
+            </select>
+          </label>
 
-          <input name="amount" type="number" min="0.01" step="0.01" placeholder="Amount" required />
-          <input name="nextRunDate" type="date" defaultValue={today} required />
-          <input name="note" placeholder="Label (e.g., Netflix, Rent)" />
+          <label className="field recurring-field recurring-amount">
+            <span>Amount</span>
+            <input name="amount" type="number" min="0.01" step="0.01" placeholder="e.g., 1500" required />
+          </label>
+          <label className="field recurring-field recurring-date">
+            <span>First run date</span>
+            <input name="nextRunDate" type="date" defaultValue={today} required />
+          </label>
+          <label className="field recurring-field recurring-note-field">
+            <span>Description (optional)</span>
+            <input name="note" placeholder="e.g., Netflix, Rent, Salary" />
+          </label>
 
-          <button className="primary-btn" type="submit" disabled={createRecurring.isPending || !canSubmit}>
-            {createRecurring.isPending ? "Saving..." : "Save"}
+          <button className="primary-btn recurring-submit-btn" type="submit" disabled={createRecurring.isPending || !canSubmit}>
+            {createRecurring.isPending ? "Saving..." : "Create recurring"}
           </button>
         </form>
       </Card>
@@ -134,8 +191,8 @@ export const RecurringPage = () => {
 
         {recurring.data?.length ? (
           <div className="table-wrap">
-            <table className="table">
-              <thead><tr><th>Amount</th><th>Type</th><th>Frequency</th><th>Next due</th><th>Status</th></tr></thead>
+            <table className="table recurring-table">
+              <thead><tr><th>Amount</th><th>Type</th><th>Frequency</th><th>Next due</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody>
                 {recurring.data.map((r) => (
                   <tr key={r.id}>
@@ -144,6 +201,58 @@ export const RecurringPage = () => {
                     <td>{freqLabel[r.frequency] ?? "Custom"}</td>
                     <td>{formatDate(r.nextRunDate)}</td>
                     <td><span className={`chip ${r.isPaused ? "chip-transfer" : "chip-income"}`}>{r.isPaused ? "Paused" : "Active"}</span></td>
+                    <td>
+                      <div className="card-icon-actions recurring-row-actions">
+                        <button
+                          className="icon-plain-btn"
+                          type="button"
+                          title="Edit"
+                          aria-label="Edit recurring item"
+                          onClick={() => {
+                            setEditingItem(r);
+                            setEditType(r.type);
+                            setEditAccountId(r.accountId);
+                            setEditDestinationAccountId(r.destinationAccountId ?? "");
+                            setEditCategoryId(r.categoryId ?? "");
+                            setEditFrequency(r.frequency);
+                            setEditAmount(String(r.amount));
+                            setEditNextRunDate(toDateInput(r.nextRunDate));
+                            setEditNote(r.note ?? "");
+                            setEditPaused(r.isPaused);
+                          }}
+                        >
+                          <FiEdit2 />
+                        </button>
+                        <button
+                          className="icon-plain-btn"
+                          type="button"
+                          title={r.isPaused ? "Resume" : "Pause"}
+                          aria-label={r.isPaused ? "Resume recurring item" : "Pause recurring item"}
+                          onClick={() =>
+                            updateRecurring.mutate({
+                              id: r.id,
+                              payload: {
+                                accountId: r.accountId,
+                                destinationAccountId: r.destinationAccountId,
+                                categoryId: r.categoryId,
+                                type: r.type,
+                                frequency: r.frequency,
+                                amount: r.amount,
+                                startDate: toDateInput(r.nextRunDate),
+                                nextRunDate: toDateInput(r.nextRunDate),
+                                note: r.note,
+                                isPaused: !r.isPaused
+                              }
+                            })
+                          }
+                        >
+                          {r.isPaused ? <FiPlayCircle /> : <FiPauseCircle />}
+                        </button>
+                        <button className="icon-plain-btn danger" type="button" title="Delete" aria-label="Delete recurring item" onClick={() => deleteRecurring.mutate(r.id)}>
+                          <FiTrash2 />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -151,6 +260,106 @@ export const RecurringPage = () => {
           </div>
         ) : null}
       </Card>
+
+      {editingItem ? (
+        <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Edit recurring item">
+          <section className="modal-card">
+            <div className="modal-head">
+              <div>
+                <h3>Edit Recurring Item</h3>
+                <p>Update schedule and amount, then save.</p>
+              </div>
+              <button className="ghost-btn icon-btn" type="button" onClick={() => setEditingItem(null)} aria-label="Close">
+                <FiX />
+              </button>
+            </div>
+
+            <form
+              className="quick-form"
+              onSubmit={(e) => {
+                e.preventDefault();
+                updateRecurring.mutate({
+                  id: editingItem.id,
+                  payload: {
+                    accountId: editAccountId,
+                    destinationAccountId: editType === 3 && editDestinationAccountId ? editDestinationAccountId : undefined,
+                    categoryId: editType !== 3 && editCategoryId ? editCategoryId : undefined,
+                    type: editType,
+                    frequency: editFrequency,
+                    amount: Number(editAmount),
+                    startDate: editNextRunDate,
+                    nextRunDate: editNextRunDate,
+                    note: editNote || undefined,
+                    isPaused: editPaused
+                  }
+                });
+              }}
+            >
+              <label>
+                Account
+                <select value={editAccountId} onChange={(e) => setEditAccountId(e.target.value)} required>
+                  {accounts.data?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              </label>
+              {editType === 3 ? (
+                <label>
+                  Destination account
+                  <select value={editDestinationAccountId} onChange={(e) => setEditDestinationAccountId(e.target.value)} required>
+                    <option value="">Select destination account</option>
+                    {accounts.data?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
+                </label>
+              ) : (
+                <label>
+                  Category
+                  <select value={editCategoryId} onChange={(e) => setEditCategoryId(e.target.value)} required>
+                    {editCategoryOptions.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </label>
+              )}
+              <label>
+                Type
+                <select value={editType} onChange={(e) => setEditType(Number(e.target.value))}>
+                  <option value={1}>Income</option>
+                  <option value={2}>Expense</option>
+                  <option value={3}>Transfer</option>
+                </select>
+              </label>
+              <label>
+                Frequency
+                <select value={editFrequency} onChange={(e) => setEditFrequency(Number(e.target.value))}>
+                  <option value={1}>Daily</option>
+                  <option value={2}>Weekly</option>
+                  <option value={3}>Monthly</option>
+                  <option value={4}>Yearly</option>
+                </select>
+              </label>
+              <label>
+                Amount
+                <input type="number" min="0.01" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} required />
+              </label>
+              <label>
+                Next run date
+                <input type="date" value={editNextRunDate} onChange={(e) => setEditNextRunDate(e.target.value)} required />
+              </label>
+              <label className="wide">
+                Note
+                <input value={editNote} onChange={(e) => setEditNote(e.target.value)} placeholder="Optional note" />
+              </label>
+              <label>
+                Is paused
+                <select value={editPaused ? "1" : "0"} onChange={(e) => setEditPaused(e.target.value === "1")}>
+                  <option value="0">No</option>
+                  <option value="1">Yes</option>
+                </select>
+              </label>
+              <button className="primary-btn wide" type="submit" disabled={updateRecurring.isPending}>
+                {updateRecurring.isPending ? "Saving..." : "Save Changes"}
+              </button>
+            </form>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 };

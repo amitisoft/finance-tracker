@@ -30,4 +30,11 @@ public sealed class GoalsController(IGoalService goalService) : ControllerBase
     [HttpPost("{id:guid}/withdraw")]
     public async Task<ActionResult<ApiResponse<GoalResponse>>> Withdraw(Guid id, [FromBody] GoalActionRequest request, CancellationToken cancellationToken) =>
         Ok(ApiResponse<GoalResponse>.Ok(await goalService.WithdrawAsync(id, request.Amount, cancellationToken), "Withdrawal successful"));
+
+    [HttpDelete("{id:guid}")]
+    public async Task<ActionResult<ApiResponse<object>>> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        await goalService.DeleteAsync(id, cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { }, "Deleted"));
+    }
 }

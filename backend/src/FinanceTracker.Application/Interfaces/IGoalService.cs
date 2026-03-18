@@ -9,4 +9,5 @@ public interface IGoalService
     Task<GoalResponse> UpdateAsync(Guid id, GoalRequest request, CancellationToken cancellationToken);
     Task<GoalResponse> ContributeAsync(Guid id, decimal amount, CancellationToken cancellationToken);
     Task<GoalResponse> WithdrawAsync(Guid id, decimal amount, CancellationToken cancellationToken);
+    Task DeleteAsync(Guid id, CancellationToken cancellationToken);
 }

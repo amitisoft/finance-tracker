@@ -1,24 +1,113 @@
-import { useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { FiBell, FiChevronRight, FiPlus, FiSearch, FiUser, FiX } from "react-icons/fi";
+import { useMemo, useState, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link, useNavigate } from "react-router-dom";
+import { FiBell, FiChevronRight, FiClock, FiCreditCard, FiMenu, FiPlus, FiSearch, FiTag, FiTarget, FiUser, FiX } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { useAccounts, useCategories } from "hooks/useFinanceQueries";
-import { transactionService } from "services/financeServices";
+import { goalService, recurringService, transactionService } from "services/financeServices";
 import { useAuthStore } from "store/authStore";
+import { formatCurrency, formatDate } from "utils/format";
 
 const today = new Date().toISOString().slice(0, 10);
 
-export const Topbar = () => {
+type SearchItem = {
+  id: string;
+  title: string;
+  subtitle: string;
+  to: string;
+  icon: ReactNode;
+};
+
+type TopbarProps = {
+  onOpenNav?: () => void;
+};
+
+export const Topbar = ({ onOpenNav }: TopbarProps) => {
+  const navigate = useNavigate();
   const fullName = useAuthStore((s) => s.fullName) ?? "User";
   const shortName = fullName.split(" ")[0] ?? "User";
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [showResults, setShowResults] = useState(false);
   const qc = useQueryClient();
   const accounts = useAccounts();
   const categories = useCategories();
+  const searchEnabled = search.trim().length >= 2;
+
+  const txSearch = useQuery({
+    queryKey: ["top-search-tx", search],
+    queryFn: () => transactionService.list({ search }),
+    enabled: searchEnabled
+  });
+
+  const goalsSearch = useQuery({
+    queryKey: ["top-search-goals", search],
+    queryFn: () => goalService.list(),
+    enabled: searchEnabled
+  });
+
+  const recurringSearch = useQuery({
+    queryKey: ["top-search-recurring", search],
+    queryFn: () => recurringService.list(),
+    enabled: searchEnabled
+  });
 
   const categoryOptions = useMemo(() => categories.data?.filter((c) => c.type === 2) ?? [], [categories.data]);
   const canSubmit = (accounts.data?.length ?? 0) > 0 && categoryOptions.length > 0;
+
+  const resultItems = useMemo<SearchItem[]>(() => {
+    if (!searchEnabled) return [];
+
+    const term = search.trim().toLowerCase();
+
+    const txItems = (txSearch.data ?? []).slice(0, 4).map((tx) => ({
+      id: `tx-${tx.id}`,
+      title: tx.note?.trim() ? tx.note : "Transaction",
+      subtitle: `${formatCurrency(tx.amount)} • ${formatDate(tx.transactionDate)}`,
+      to: `/transactions?search=${encodeURIComponent(search.trim())}`,
+      icon: <FiCreditCard />
+    }));
+
+    const goalItems = (goalsSearch.data ?? [])
+      .filter((g) => g.name.toLowerCase().includes(term))
+      .slice(0, 3)
+      .map((g) => ({
+        id: `goal-${g.id}`,
+        title: g.name,
+        subtitle: `Goal • ${g.progressPercent}% complete`,
+        to: "/goals",
+        icon: <FiTarget />
+      }));
+
+    const recurringItems = (recurringSearch.data ?? [])
+      .filter((r) => (r.note ?? "").toLowerCase().includes(term))
+      .slice(0, 3)
+      .map((r) => ({
+        id: `rec-${r.id}`,
+        title: r.note?.trim() ? r.note : "Recurring item",
+        subtitle: `Recurring • ${formatCurrency(r.amount)} • ${formatDate(r.nextRunDate)}`,
+        to: "/recurring",
+        icon: <FiClock />
+      }));
+
+    const categoryItems = (categories.data ?? [])
+      .filter((c) => c.name.toLowerCase().includes(term))
+      .slice(0, 3)
+      .map((c) => ({
+        id: `cat-${c.id}`,
+        title: c.name,
+        subtitle: `Category • ${c.type === 1 ? "Income" : "Expense"}`,
+        to: "/settings",
+        icon: <FiTag />
+      }));
+
+    return [...txItems, ...goalItems, ...recurringItems, ...categoryItems].slice(0, 10);
+  }, [categories.data, goalsSearch.data, recurringSearch.data, search, searchEnabled, txSearch.data]);
+
+  const goToResult = (item: SearchItem) => {
+    navigate(item.to);
+    setShowResults(false);
+  };
 
   const addTransaction = useMutation({
     mutationFn: transactionService.create,
@@ -37,9 +126,63 @@ export const Topbar = () => {
   return (
     <>
       <header className="topbar">
-        <div className="search-box" role="search">
-          <FiSearch />
-          <input placeholder="Search transactions, goals, categories" aria-label="Search" />
+        <div className="topbar-left">
+          {onOpenNav ? (
+            <button className="ghost-btn icon-btn mobile-menu-btn" type="button" aria-label="Open navigation" onClick={onOpenNav}>
+              <FiMenu />
+            </button>
+          ) : null}
+          <div className="search-box search-shell" role="search">
+            <FiSearch />
+            <input
+              placeholder="Search transactions, goals, recurring, categories"
+              aria-label="Search"
+              value={search}
+              onFocus={() => setShowResults(true)}
+              onBlur={() => setTimeout(() => setShowResults(false), 120)}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && resultItems.length > 0) {
+                  e.preventDefault();
+                  goToResult(resultItems[0]);
+                }
+                if (e.key === "Escape") {
+                  setShowResults(false);
+                }
+              }}
+            />
+            {search && (
+              <button
+                type="button"
+                className="icon-plain-btn"
+                aria-label="Clear search"
+                onClick={() => {
+                  setSearch("");
+                  setShowResults(false);
+                }}
+              >
+                <FiX size={15} />
+              </button>
+            )}
+
+            {showResults && searchEnabled ? (
+              <div className="search-results" onMouseDown={(e) => e.preventDefault()}>
+                {resultItems.length === 0 ? (
+                  <div className="search-empty">No matches found</div>
+                ) : (
+                  resultItems.map((item) => (
+                    <button key={item.id} type="button" className="search-result-item" onClick={() => goToResult(item)}>
+                      <span className="search-result-icon">{item.icon}</span>
+                      <span>
+                        <strong>{item.title}</strong>
+                        <small>{item.subtitle}</small>
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className="topbar-actions">
           <button className="primary-btn topbar-add" type="button" onClick={() => setOpen(true)}>
