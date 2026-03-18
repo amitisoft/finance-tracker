@@ -17,6 +17,7 @@ public sealed class AuthService(
     FinanceTrackerDbContext db,
     IPasswordHasher passwordHasher,
     ITokenService tokenService,
+    ICurrentUserService currentUser,
     IUserCategoryInitializer userCategoryInitializer,
     IOptions<JwtOptions> jwtOptions) : IAuthService
 {
@@ -117,6 +118,52 @@ public sealed class AuthService(
         await db.SaveChangesAsync(cancellationToken);
 
         return new AuthResponse(access, newRefresh, DateTime.UtcNow.AddMinutes(jwtOptions.Value.AccessTokenMinutes), token.UserId, token.User.Email, $"{token.User.FirstName} {token.User.LastName}");
+    }
+
+    public async Task<UserProfileResponse> GetProfileAsync(CancellationToken cancellationToken)
+    {
+        var user = await db.Users
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == currentUser.UserId, cancellationToken)
+            ?? throw new ForbiddenException("User context is invalid.");
+
+        return new UserProfileResponse(user.Id, user.Email, user.FirstName, user.LastName, $"{user.FirstName} {user.LastName}");
+    }
+
+    public async Task<UserProfileResponse> UpdateProfileAsync(UpdateProfileRequest request, CancellationToken cancellationToken)
+    {
+        var firstName = request.FirstName?.Trim() ?? string.Empty;
+        var lastName = request.LastName?.Trim() ?? string.Empty;
+
+        if (firstName.Length < 2) throw new AppValidationException("First name must be at least 2 characters.");
+        if (lastName.Length < 2) throw new AppValidationException("Last name must be at least 2 characters.");
+
+        var user = await db.Users.FirstOrDefaultAsync(x => x.Id == currentUser.UserId, cancellationToken)
+            ?? throw new ForbiddenException("User context is invalid.");
+
+        user.FirstName = firstName;
+        user.LastName = lastName;
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new UserProfileResponse(user.Id, user.Email, user.FirstName, user.LastName, $"{user.FirstName} {user.LastName}");
+    }
+
+    public async Task ChangePasswordAsync(ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.CurrentPassword))
+            throw new AppValidationException("Current password is required.");
+
+        ValidatePassword(request.NewPassword);
+
+        var user = await db.Users.FirstOrDefaultAsync(x => x.Id == currentUser.UserId, cancellationToken)
+            ?? throw new ForbiddenException("User context is invalid.");
+
+        if (!passwordHasher.Verify(request.CurrentPassword, user.PasswordHash))
+            throw new ForbiddenException("Current password is incorrect.");
+
+        user.PasswordHash = passwordHasher.Hash(request.NewPassword);
+        await db.SaveChangesAsync(cancellationToken);
     }
 
     public async Task ForgotPasswordAsync(ForgotPasswordRequest request, CancellationToken cancellationToken)

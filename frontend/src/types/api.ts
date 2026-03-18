@@ -13,6 +13,14 @@ export type AuthTokens = {
   fullName: string;
 };
 
+export type UserProfile = {
+  userId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+};
+
 export type Account = {
   id: string;
   name: string;

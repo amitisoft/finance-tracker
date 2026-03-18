@@ -1,6 +1,7 @@
 using FinanceTracker.Application.Common;
 using FinanceTracker.Application.DTOs.Auth;
 using FinanceTracker.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -30,6 +31,30 @@ public sealed class AuthController(IAuthService authService) : ControllerBase
     {
         var result = await authService.RefreshAsync(request, cancellationToken);
         return Ok(ApiResponse<AuthResponse>.Ok(result, "Refreshed"));
+    }
+
+    [Authorize]
+    [HttpGet("me")]
+    public async Task<ActionResult<ApiResponse<UserProfileResponse>>> Me(CancellationToken cancellationToken)
+    {
+        var result = await authService.GetProfileAsync(cancellationToken);
+        return Ok(ApiResponse<UserProfileResponse>.Ok(result));
+    }
+
+    [Authorize]
+    [HttpPut("me")]
+    public async Task<ActionResult<ApiResponse<UserProfileResponse>>> UpdateProfile([FromBody] UpdateProfileRequest request, CancellationToken cancellationToken)
+    {
+        var result = await authService.UpdateProfileAsync(request, cancellationToken);
+        return Ok(ApiResponse<UserProfileResponse>.Ok(result, "Profile updated"));
+    }
+
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<ActionResult<ApiResponse<object>>> ChangePassword([FromBody] ChangePasswordRequest request, CancellationToken cancellationToken)
+    {
+        await authService.ChangePasswordAsync(request, cancellationToken);
+        return Ok(ApiResponse<object>.Ok(new { }, "Password changed"));
     }
 
     [HttpPost("forgot-password")]

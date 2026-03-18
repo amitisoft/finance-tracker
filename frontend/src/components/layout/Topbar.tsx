@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { FiBell, FiPlus, FiSearch, FiX } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { useAccounts, useCategories } from "hooks/useFinanceQueries";
@@ -46,7 +47,7 @@ export const Topbar = () => {
           <button className="ghost-btn icon-btn" type="button" aria-label="Notifications">
             <FiBell />
           </button>
-          <div className="profile-pill" aria-label="Profile name">{fullName}</div>
+          <Link className="profile-pill" to="/user-profile" aria-label="Profile name">{fullName}</Link>
         </div>
       </header>
 

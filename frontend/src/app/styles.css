@@ -172,6 +172,8 @@ a {
   padding: 10px 15px;
   font-weight: 600;
   box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: var(--text);
 }
 
 .topbar-add {

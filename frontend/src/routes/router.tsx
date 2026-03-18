@@ -14,6 +14,7 @@ import { ReportsPage } from "pages/ReportsPage";
 import { RecurringPage } from "pages/RecurringPage";
 import { AccountsPage } from "pages/AccountsPage";
 import { SettingsPage } from "pages/SettingsPage";
+import { UserProfilePage } from "pages/UserProfilePage";
 
 export const router = createBrowserRouter([
   {
@@ -38,7 +39,8 @@ export const router = createBrowserRouter([
           { path: "/reports", element: <ReportsPage /> },
           { path: "/recurring", element: <RecurringPage /> },
           { path: "/accounts", element: <AccountsPage /> },
-          { path: "/settings", element: <SettingsPage /> }
+          { path: "/settings", element: <SettingsPage /> },
+          { path: "/user-profile", element: <UserProfilePage /> }
         ]
       }
     ]
