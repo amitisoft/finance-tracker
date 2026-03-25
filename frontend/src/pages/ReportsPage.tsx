@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { FiDownload, FiRotateCcw } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import toast from "react-hot-toast";
 import { Card } from "components/common/Card";
 import { PageHeader } from "components/common/PageHeader";
 import { CategorySpendChart } from "components/charts/CategorySpendChart";
@@ -9,6 +10,7 @@ import { SavingsProgressChart } from "components/charts/SavingsProgressChart";
 import { EmptyState, LoadingState } from "components/feedback/States";
 import { useBalanceTrend, useCategorySpend, useIncomeExpense, useSavingsReport } from "hooks/useFinanceQueries";
 import { reportService } from "services/financeServices";
+import { getApiErrorMessage } from "utils/apiError";
 import { formatCurrency } from "utils/format";
 
 export const ReportsPage = () => {
@@ -23,6 +25,7 @@ export const ReportsPage = () => {
 
   const [from, setFrom] = useState(defaults.from);
   const [to, setTo] = useState(defaults.to);
+  const [exporting, setExporting] = useState(false);
 
   const fromIso = `${from}T00:00:00.000Z`;
   const toIso = `${to}T23:59:59.999Z`;
@@ -31,6 +34,30 @@ export const ReportsPage = () => {
   const incomeExpense = useIncomeExpense(fromIso, toIso);
   const balanceTrend = useBalanceTrend(fromIso, toIso);
   const savings = useSavingsReport();
+
+  const onExportCsv = async () => {
+    if (exporting) {
+      return;
+    }
+
+    try {
+      setExporting(true);
+      const { blob, fileName } = await reportService.exportCsv(fromIso, toIso);
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = fileName || `finance-report-${from}-to-${to}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+      toast.success("CSV exported");
+    } catch (error) {
+      toast.error(getApiErrorMessage(error, "Unable to export CSV"));
+    } finally {
+      setExporting(false);
+    }
+  };
 
   return (
     <div className="page-grid">
@@ -51,10 +78,10 @@ export const ReportsPage = () => {
               <FiRotateCcw />
               Reset
             </button>
-            <a className="primary-btn compact-btn report-export-btn" href={reportService.exportCsvUrl(fromIso, toIso)} target="_blank" rel="noreferrer">
+            <button className="primary-btn compact-btn report-export-btn" type="button" onClick={onExportCsv} disabled={exporting}>
               <FiDownload />
-              Export CSV
-            </a>
+              {exporting ? "Exporting..." : "Export CSV"}
+            </button>
           </div>
         </form>
       </Card>

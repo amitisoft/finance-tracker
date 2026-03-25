@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { FiEdit2, FiTrash2, FiX } from "react-icons/fi";
 import toast from "react-hot-toast";
@@ -9,17 +9,11 @@ import { useCategories, useRulesV2 } from "hooks/useFinanceQueries";
 import { rulesV2Service } from "services/financeServices";
 import type { Rule, RuleRequest } from "types/api";
 import { getApiErrorMessage } from "utils/apiError";
+import { formatCurrency } from "utils/format";
 
-const conditionLabel: Record<number, string> = {
-  1: "Merchant contains",
-  2: "Amount greater than",
-  3: "Category equals"
-};
-
-const actionLabel: Record<number, string> = {
-  1: "Set category",
-  2: "Create alert",
-  3: "Add tag"
+type RuleText = {
+  main: string;
+  hint?: string;
 };
 
 export const RulesPage = () => {
@@ -37,6 +31,72 @@ export const RulesPage = () => {
     actionType: 2,
     actionValue: ""
   });
+
+  const categoryById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const category of categories.data ?? []) {
+      map.set(category.id, category.name);
+    }
+    return map;
+  }, [categories.data]);
+
+  const describeCondition = (rule: Rule): RuleText => {
+    if (rule.conditionType === 1) {
+      const merchantText = (rule.conditionValue ?? "").trim();
+      return {
+        main: merchantText ? `Merchant contains "${merchantText}"` : "Merchant contains (not set)"
+      };
+    }
+
+    if (rule.conditionType === 2) {
+      return {
+        main: `Amount greater than ${formatCurrency(rule.amountThreshold ?? 0)}`
+      };
+    }
+
+    if (rule.conditionType === 3) {
+      const categoryName = rule.conditionValue ? categoryById.get(rule.conditionValue) : null;
+      if (categoryName) {
+        return { main: `Category equals ${categoryName}` };
+      }
+
+      return {
+        main: "Category equals (unknown category)",
+        hint: rule.conditionValue ? `ID: ${rule.conditionValue}` : undefined
+      };
+    }
+
+    return { main: "Unknown condition" };
+  };
+
+  const describeAction = (rule: Rule): RuleText => {
+    if (rule.actionType === 1) {
+      const categoryName = rule.actionValue ? categoryById.get(rule.actionValue) : null;
+      if (categoryName) {
+        return { main: `Set category to ${categoryName}` };
+      }
+
+      return {
+        main: "Set category (unknown category)",
+        hint: rule.actionValue ? `ID: ${rule.actionValue}` : undefined
+      };
+    }
+
+    if (rule.actionType === 2) {
+      return {
+        main: `Create alert: ${rule.actionValue?.trim() || "Rule alert"}`
+      };
+    }
+
+    if (rule.actionType === 3) {
+      const tagValue = rule.actionValue?.trim();
+      return {
+        main: `Add tag: ${tagValue || "(not set)"}`
+      };
+    }
+
+    return { main: "Unknown action" };
+  };
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["v2-rules"] });
@@ -181,6 +241,9 @@ export const RulesPage = () => {
       </Card>
 
       <Card title="Rules list" subtitle="Lower priority number executes first">
+        <p className="rules-list-note">
+          On each new transaction, active rules are evaluated in priority order. If a condition matches, the action is applied.
+        </p>
         {!rules.data?.length ? (
           <EmptyState text="No rules created yet" hint="Create your first rule above to automate categorization, alerts, or tags." />
         ) : (
@@ -190,24 +253,35 @@ export const RulesPage = () => {
                 <tr><th>Name</th><th>Priority</th><th>Condition</th><th>Action</th><th>Status</th><th>Actions</th></tr>
               </thead>
               <tbody>
-                {rules.data.map((r) => (
-                  <tr key={r.id}>
-                    <td>{r.name}</td>
-                    <td>{r.priority}</td>
-                    <td>{conditionLabel[r.conditionType]}{r.conditionType === 2 ? `: ${r.amountThreshold}` : `: ${r.conditionValue ?? "-"}`}</td>
-                    <td>{actionLabel[r.actionType]}: {r.actionValue ?? "-"}</td>
-                    <td><span className={`chip ${r.isActive ? "chip-income" : "chip-transfer"}`}>{r.isActive ? "Active" : "Inactive"}</span></td>
-                    <td>
-                      <div className="card-icon-actions">
-                        <button className="icon-plain-btn" type="button" onClick={() => fillForEdit(r)} aria-label="Edit rule"><FiEdit2 /></button>
-                        <button className="ghost-btn table-inline-btn" type="button" onClick={() => updateRule.mutate({ id: r.id, payload: { ...r, isActive: !r.isActive } })} aria-label="Toggle active">
-                          {r.isActive ? "Pause" : "Start"}
-                        </button>
-                        <button className="icon-plain-btn danger" type="button" onClick={() => deleteRule.mutate(r.id)} aria-label="Delete rule"><FiTrash2 /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {rules.data.map((r) => {
+                  const condition = describeCondition(r);
+                  const action = describeAction(r);
+
+                  return (
+                    <tr key={r.id}>
+                      <td>{r.name}</td>
+                      <td>{r.priority}</td>
+                      <td className="rules-detail-cell">
+                        <span className="rules-detail-main">{condition.main}</span>
+                        {condition.hint ? <small className="rules-detail-hint">{condition.hint}</small> : null}
+                      </td>
+                      <td className="rules-detail-cell">
+                        <span className="rules-detail-main">{action.main}</span>
+                        {action.hint ? <small className="rules-detail-hint">{action.hint}</small> : null}
+                      </td>
+                      <td><span className={`chip ${r.isActive ? "chip-income" : "chip-transfer"}`}>{r.isActive ? "Active" : "Inactive"}</span></td>
+                      <td>
+                        <div className="card-icon-actions">
+                          <button className="icon-plain-btn" type="button" onClick={() => fillForEdit(r)} aria-label="Edit rule"><FiEdit2 /></button>
+                          <button className="ghost-btn table-inline-btn" type="button" onClick={() => updateRule.mutate({ id: r.id, payload: { ...r, isActive: !r.isActive } })} aria-label="Toggle active">
+                            {r.isActive ? "Pause" : "Start"}
+                          </button>
+                          <button className="icon-plain-btn danger" type="button" onClick={() => deleteRule.mutate(r.id)} aria-label="Delete rule"><FiTrash2 /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -95,18 +95,18 @@ export const InsightsPage = () => {
     <div className="page-grid insights-page">
       <PageHeader title="Insights (V2)" subtitle="Health score, trends, forecasting, and explainable insights." />
 
-      <Card title="Analysis Filters" subtitle="Apply optional account/category filters to trends">
+      <Card className="insights-filter-card" title="Analysis Filters" subtitle="Apply optional account/category filters to trends">
         <form className="row-form insights-filter-form" onSubmit={(e) => e.preventDefault()}>
-          <label className="field"><span>From</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
-          <label className="field"><span>To</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
-          <label className="field">
+          <label className="field insights-filter-field"><span>From</span><input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></label>
+          <label className="field insights-filter-field"><span>To</span><input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></label>
+          <label className="field insights-filter-field">
             <span>Account</span>
             <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
               <option value="">All accounts</option>
               {accounts.data?.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </label>
-          <label className="field">
+          <label className="field insights-filter-field">
             <span>Category</span>
             <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
               <option value="">All categories</option>

@@ -72,7 +72,21 @@ export const reportService = {
   incomeVsExpense: async (from: string, to: string) => (await api.get<ApiResponse<IncomeVsExpenseItem[]>>(`/reports/income-vs-expense?from=${from}&to=${to}`)).data.data,
   balanceTrend: async (from: string, to: string) => (await api.get<ApiResponse<AccountBalanceTrendItem[]>>(`/reports/account-balance-trend?from=${from}&to=${to}`)).data.data,
   savings: async () => (await api.get<ApiResponse<SavingsProgressItem[]>>("/reports/savings-progress")).data.data,
-  exportCsvUrl: (from: string, to: string) => `${api.defaults.baseURL}/reports/export/csv?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+  exportCsv: async (from: string, to: string) => {
+    const response = await api.get<Blob>("/reports/export/csv", {
+      params: { from, to },
+      responseType: "blob"
+    });
+
+    const contentDisposition = response.headers?.["content-disposition"] as string | undefined;
+    const matchedFileName = contentDisposition?.match(/filename\*?=(?:UTF-8''|\"?)([^\";]+)/i)?.[1];
+    const fileName = decodeURIComponent((matchedFileName ?? "finance-report.csv").replace(/\"/g, "").trim());
+
+    return {
+      blob: response.data,
+      fileName
+    };
+  }
 };
 
 export const insightV2Service = {
